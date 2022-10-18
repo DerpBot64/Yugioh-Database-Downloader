@@ -1,13 +1,6 @@
 package com.kianbennett.tcgcollector;
 
-import javafx.scene.input.DataFormat;
-import org.apache.commons.io.IOUtils;
 
-import java.io.IOException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class Main {

@@ -47,6 +47,11 @@ public class WikitextObject {
             }
             return null;
         }
+        
+        public String toString() {
+        	return heading + ":" + key + ":" +value;
+        }
+        
     }
     public class ListProperty extends TableProperty {
         public List<ListProperty> subLists;
@@ -80,6 +85,18 @@ public class WikitextObject {
 
     public WikitextObject(String wikiText) {
         parseText(wikiText);
+        
+        addPropertiesToCardTable2();
+    }
+    
+    private void addPropertiesToCardTable2() {
+    	WikitextObject.Table table = this.getTable("CardTable2");
+    	
+    	if(table != null) {
+    	
+    		table.properties.addAll(this.properties);
+    	}
+    	
     }
 
     private void parseText(String text) {
@@ -112,16 +129,16 @@ public class WikitextObject {
                     tables.add(table);
                 }
             }
-            if(line.startsWith("}}")) {
+            else if(line.startsWith("}}")) {
                 tableCurrent = null;
                 propertyCurrent = null;
             }
 
-            if(line.startsWith("=") && line.endsWith("=")) {
+            else if(line.startsWith("=") && line.endsWith("=")) {
                 headingCurrent = line.replaceAll("=", "").trim();
             }
 
-            if(line.startsWith("|") || line.startsWith("*")) {
+            else if(line.startsWith("|") || line.startsWith("*")) {
                 TableProperty property = null;
                 if(line.startsWith("|")) {
                     property = new TableProperty();
@@ -165,7 +182,7 @@ public class WikitextObject {
                 parsePropertyValue(property);
             }
 
-            if(line.startsWith("'''")) { // Special case scenario - some sets have their table info in this weird format
+            else if(line.startsWith("'''")) { // Special case scenario - some sets have their table info in this weird format
                 TableProperty prop1 = new TableProperty(), prop2 = new TableProperty(), prop3 = new TableProperty();
 
                 String[] split = line.split(Pattern.quote("("));
@@ -208,6 +225,24 @@ public class WikitextObject {
                     }
                 }
             }
+            else {
+            	//
+            	if (tableCurrent != null){
+            		parseSingleDataLineFromTable(line, tableCurrent);
+            	}
+            }
+        }
+    }
+    
+
+    private void parseSingleDataLineFromTable(String s, Table table) {
+        s = s.replace("{{", "");
+        s = s.replace("}}", "");
+        String[] split = s.split(Pattern.quote(";"));
+        for(int i = 0; i < split.length; i++) {
+            TableProperty prop = new TableProperty();
+            prop.key = split[i].trim();
+            table.properties.add(prop);
         }
     }
 

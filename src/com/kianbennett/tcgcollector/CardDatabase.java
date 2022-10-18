@@ -48,7 +48,7 @@ public class CardDatabase {
 
             System.out.println(cardList.size() + " cards to load...");
 
-            int interval = 50;
+            int interval = 45;
             if(img) interval = 10;
 
             if(!basic) {
@@ -63,7 +63,7 @@ public class CardDatabase {
                     if(cards.size() > 0) {
                         long timeStart = new Date().getTime();
                         getCardDetails(cards);
-                        getCardImageUrls(cards, img);
+                        //getCardImageUrls(cards, img);
                         getCardTips(cards);
                         cardsLoaded += cards.size();
                         long timeFinished = new Date().getTime();
@@ -91,17 +91,48 @@ public class CardDatabase {
         long timeElapsed = dateFinished.getTime() - dateCreated.getTime();
         System.out.println("Done in " + df.format((float) timeElapsed / 1000f) + "s");
     }
+    
+    private final String BaseURL = "http://yugioh.wikia.com/w/index.php?curid=";
 
     private void getCardList() throws IOException {
-        String url = "http://yugioh.wikia.com/api/v1/Articles/List?category=TCG_cards&limit=99999&namespaces=0";
+        String url = "http://yugioh.wikia.com/api.php?action=query&list=categorymembers&cmtitle=Category:TCG_cards&cmlimit=500&format=json";
+        String continueUrl = "http://yugioh.wikia.com/api.php?action=query&list=categorymembers&cmtitle=Category:TCG_cards&cmlimit=500&format=json&cmcontinue=";
         String json = IOUtils.toString(new URL(url), "utf-8");
         JsonObject jsonObject = parser.parse(json).getAsJsonObject();
-        JsonArray items = jsonObject.getAsJsonArray("items");
-
-        for(int i = 0; i < items.size(); i++) {
-            int id = items.get(i).getAsJsonObject().get("id").getAsInt();
+        
+        JsonObject categorySection = jsonObject.getAsJsonObject("query");
+        
+        JsonArray items = categorySection.getAsJsonArray("categorymembers");
+        
+        JsonObject queryContinue = jsonObject.getAsJsonObject("continue");
+        String stringContinue = null;
+        if(queryContinue != null) {
+        	stringContinue = queryContinue.get("cmcontinue").getAsString();
+        }
+        addOneQueryToCardList(items);
+        
+        while (queryContinue != null) {
+        	
+        	json = IOUtils.toString(new URL(continueUrl + stringContinue), "utf-8");
+            jsonObject = parser.parse(json).getAsJsonObject();
+            categorySection = jsonObject.getAsJsonObject("query");
+            
+            items = categorySection.getAsJsonArray("categorymembers");
+            queryContinue = jsonObject.getAsJsonObject("continue");
+            
+            if(queryContinue != null) {
+            	stringContinue = queryContinue.get("cmcontinue").getAsString();
+            }
+            
+            addOneQueryToCardList(items);
+        }
+    }
+    
+    private void addOneQueryToCardList(JsonArray items) {
+    	for(int i = 0; i < items.size(); i++) {
+            int id = items.get(i).getAsJsonObject().get("pageid").getAsInt();
             String title = items.get(i).getAsJsonObject().get("title").getAsString();
-            String wikiUrl = items.get(i).getAsJsonObject().get("url").getAsString();
+            String wikiUrl = BaseURL + id;
             if(!title.contains("(temp)")) {
                 cardList.add(new Card(id, title, wikiUrl));
             }
@@ -134,7 +165,7 @@ public class CardDatabase {
             if(table.hasProperty("lore")) card.lore = table.getProperty("lore").value;
             if(table.hasProperty("image")) card.image = table.getProperty("image").value;
             if(table.hasProperty("attribute")) card.attribute = table.getProperty("attribute").value;
-
+            
             if(table.hasProperty("archseries")) {
                 String[] array = listPropertyToStrings(table.getProperty("archseries"));
                 if(array.length > 0) card.archetypes = array;
@@ -151,8 +182,10 @@ public class CardDatabase {
                 String[] array = listPropertyToStrings(table.getProperty("action"));
                 if(array.length > 0) card.actions = array;
             }
-
+            
+            if(table.hasProperty("link_arrows")) card.link_arrows = table.getProperty("link_arrows").value;
             if(table.hasProperty("level")) card.level = table.getProperty("level").value;
+            if(table.hasProperty("rank")) card.rank = table.getProperty("rank").value;
             if(table.hasProperty("atk")) card.atk = table.getProperty("atk").value;
             if(table.hasProperty("def")) card.def = table.getProperty("def").value;
             if(table.hasProperty("number")) {
@@ -189,6 +222,8 @@ public class CardDatabase {
             if(table.hasProperty("ocg")) card.statusOcg = table.getProperty("ocg").value;
             if(table.hasProperty("adv")) card.statusTcgAdv = table.getProperty("adv").value;
             if(table.hasProperty("trad")) card.statusTcgTrad = table.getProperty("trad").value;
+            
+            if(table.hasProperty("passcode")) card.passcode = table.getProperty("passcode").value;
 
             if(table.hasProperty("en_sets") || table.hasProperty("na_sets") || table.hasProperty("eu_sets")) {
                 List<Card.CardSet> cardSets = new ArrayList<>();
@@ -303,6 +338,18 @@ public class CardDatabase {
                     if(setTable.properties.size() >= 3) cardSet.rarity = setTable.properties.get(2).key;
                     cardSets.add(cardSet);
                 }
+                
+                if(setTable.name.contains("Card set")) {
+                    int size = setTable.properties.size();
+                    for(int i = 0; i < size; i+=3) {
+                    	Card.CardSet cardSet = new Card.CardSet(null, null, null);
+                    	if(i < size) cardSet.number = setTable.properties.get(i).key;
+                    	if(i+1 < size) cardSet.setName = setTable.properties.get(i+1).key + setNameSuffix;
+                    	if(i+2 < size) cardSet.rarity = setTable.properties.get(i+2).key;
+                        cardSets.add(cardSet);
+                    }
+                }
+                
                 if(setTable.name.equals("")) {
                     Card.CardSet cardSet = new Card.CardSet(null, null, null);
                     if(setTable.properties.size() >= 1) cardSet.number = setTable.properties.get(1).key;

@@ -1,8 +1,5 @@
 package com.kianbennett.tcgcollector;
 
-import com.oracle.webservices.internal.api.message.PropertySet;
-
-import java.util.Comparator;
 import java.util.List;
 
 public class Card implements Comparable<Card> {
@@ -39,7 +36,9 @@ public class Card implements Comparable<Card> {
     public String[] archetypesSupports;
     public String[] actions;
     public String[] types;
+    public String link_arrows;
     public String level;
+    public String rank;
     public String atk;
     public String def;
     public String number;
@@ -48,6 +47,7 @@ public class Card implements Comparable<Card> {
     public String[] effectTypes;
     public String[] pendulumEffectTypes;
     public String pendulumEffect;
+    public String passcode;
 
     public String imageUrl;
     public List<PropertyListValue> tips, tipsTraditional;
